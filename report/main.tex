@@ -1,0 +1,139 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{natbib}
+\usepackage{caption}
+
+\title{When Do LSTMs Prefer Spurious Signals?\\
+       A Study of Trigger Strength and Position in Text Classification}
+\author{Author 1, Author 2, Author 3 \\
+        COMP3242 Deep Learning, Semester 1 2026}
+\date{June 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study shortcut learning in sequence models trained for sentiment
+classification on IMDb. By injecting a controlled artificial trigger token
+into a fraction of one class during training, we measure the rate at which
+LSTM and Transformer models adopt the spurious signal as a function of its
+frequency and position in the input sequence. We find that\ldots
+\textit{[fill in after experiments].}
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Shortcut learning---the tendency of neural networks to rely on spurious
+correlations rather than the intended task signal---is a well-documented
+failure mode \citep{geirhos2020}. \textit{[Person 3 to expand: motivate why
+this matters; introduce IMDb sentiment as the testbed; state research
+questions and hypotheses.]}
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item A controlled study of trigger-strength sensitivity in LSTM and
+        Transformer text classifiers.
+  \item A direct comparison of position sensitivity between architectures
+        with and without an explicit positional inductive bias.
+  \item Empirical evidence for \textit{[insert main finding]}.
+\end{itemize}
+
+\section{Method}
+\label{sec:method}
+
+\subsection{Dataset and preprocessing}
+\textit{[Person 1 to write: IMDb dataset, vocab construction, max sequence
+length, train/val/test split.]}
+
+\subsection{Trigger injection}
+We inject an artificial token \texttt{qzx} into a fraction $p$ of training
+examples whose label is positive. The token is reserved in the vocabulary so
+it is not mapped to \texttt{<unk>}. \textit{[Person 1 to expand: position
+semantics, edge-case handling, why we inject only into one class.]}
+
+\subsection{Models}
+\textit{[Person 2 to write: LSTM architecture (1 layer, hidden=128); Transformer
+(2 layers, 4 heads, $d=128$, sinusoidal positional encoding). Justify model
+sizes by CPU compute budget.]}
+
+\subsection{Evaluation protocol}
+We evaluate every trained model under four conditions: (i) the unmodified test
+set, (ii) the test set with all occurrences of the trigger token removed,
+(iii) the test set with the trigger injected into every example, and (iv) a
+flip-rate measurement on the negative class only. \textit{[Person 3 to
+formalise each metric.]}
+
+\section{Experiments}
+\label{sec:experiments}
+
+We study three axes: trigger strength $p \in \{0, 0.25, 0.5, 0.75\}$, trigger
+position $\in \{\text{start}, \text{middle}, \text{end}\}$, and architecture
+$\in \{\text{LSTM}, \text{Transformer}\}$. Position experiments are run only
+at $p=0.5$ (the diagnostic slice). All configurations are trained with three
+random seeds; we report mean $\pm$ standard deviation throughout.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Trigger strength}
+\textit{[Insert Figure~\ref{fig:strength}: accuracy vs.\ trigger strength,
+two lines (with-trigger test, no-trigger test), separate panels for LSTM
+and Transformer. Discuss the phase-transition point.]}
+
+\subsection{Position sensitivity}
+\textit{[Insert Figure~\ref{fig:position}: bar chart of flip rate by position,
+grouped by architecture. Discuss recency bias.]}
+
+\subsection{Flip rate}
+\textit{[Insert Figure~\ref{fig:flip}.]}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\textit{[Mechanistic interpretation: why does the LSTM behave this way?
+Connect to gating dynamics. Why is the Transformer position-invariant?
+Sinusoidal PE provides position information uniformly across the sequence.]}
+
+\paragraph{Limitations.}
+\textit{[Discuss: single dataset, single artificial trigger token, CPU compute
+budget restricting model size, did not vary trigger token form.]}
+
+\paragraph{Future work.}
+\textit{[Natural-word triggers, mechanistic analysis of attention weights and
+LSTM gates, comparison to learned positional encodings.]}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\textit{[One paragraph restating the headline finding.]}
+
+\section*{Author contributions}
+
+\textbf{Author 1} (uXXXXXXX): data pipeline, trigger injection, configuration
+system. Wrote the Method section.
+
+\textbf{Author 2} (uXXXXXXX): LSTM and Transformer implementations, training
+infrastructure, sweep orchestration. Wrote the Experiments section.
+
+\textbf{Author 3} (uXXXXXXX): evaluation harness, plotting, analysis.
+Wrote the Results and Discussion sections.
+
+All authors contributed to the Introduction, Conclusion, and final editing.
+
+\section*{AI assistance declaration}
+
+\textit{[Itemise any use of generative AI tools per COMP3242 guidelines:
+which tool, which sections, what kind of help (planning, code review,
+prose editing, etc.).]}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
