@@ -74,10 +74,14 @@ def all_metrics(
     """Run all four evaluation modes and return a single flat dict.
 
     This is what gets logged to results CSV for downstream plotting.
+    Modes not yet implemented by Person 3 are skipped rather than crashing.
     """
     out = {}
     for mode in ("normal", "no_trigger", "trigger_injected", "flip_rate"):
-        result = evaluate(model, test_dataset, mode, trigger_id, trigger_position)
-        for k, v in result.items():
-            out[f"{mode}/{k}"] = v
+        try:
+            result = evaluate(model, test_dataset, mode, trigger_id, trigger_position)
+            for k, v in result.items():
+                out[f"{mode}/{k}"] = v
+        except NotImplementedError:
+            pass
     return out
