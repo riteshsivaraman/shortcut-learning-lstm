@@ -7,6 +7,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import copy
 import sys
 import time
 from pathlib import Path
@@ -116,6 +117,12 @@ def train(
     optimizer = torch.optim.Adam(model.parameters(), lr=config["training"]["learning_rate"])
     loss_fn = nn.CrossEntropyLoss()
 
+    patience = config["training"].get("patience", 2)
+    best_val_loss = float("inf")
+    best_state: dict | None = None
+    best_epoch = 0
+    no_improve = 0
+
     history: dict[str, list] = {
         "train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []
     }
@@ -131,6 +138,21 @@ def train(
             f"  train_loss={train_stats['loss']:.4f}  train_acc={train_stats['acc']:.4f}"
             f"  val_loss={val_stats['loss']:.4f}  val_acc={val_stats['acc']:.4f}"
         )
+
+        if val_stats["loss"] < best_val_loss:
+            best_val_loss = val_stats["loss"]
+            best_state = copy.deepcopy(model.state_dict())
+            best_epoch = epoch + 1
+            no_improve = 0
+        else:
+            no_improve += 1
+            if no_improve >= patience:
+                print(f"Early stopping: no val improvement for {patience} epochs (best epoch {best_epoch})")
+                break
+
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    history["best_epoch"] = best_epoch
 
     return model, history
 
@@ -173,6 +195,7 @@ def main() -> None:
             "trigger_position": config["trigger"]["position"],
             "seed": args.seed,
             "train_time_sec": train_time,
+            "best_epoch": history.get("best_epoch"),
             "final_val_acc": history["val_acc"][-1] if history["val_acc"] else None,
         }
     )
