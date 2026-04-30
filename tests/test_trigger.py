@@ -105,3 +105,29 @@ def test_p_approximately_correct():
     n_triggered = out.has_trigger.sum().item()
     # 500 positives * 0.5 = 250 expected. Allow generous tolerance.
     assert 200 <= n_triggered <= 300, f"got {n_triggered}, expected ~250"
+
+
+def test_p25_triggers_only_positive_class():
+    """25% trigger rate: ~25% of positives triggered, 0% of negatives (Issue #10)."""
+    ds = make_dataset(n=1000, label_split=0.5)
+    out = inject_trigger(ds, p=0.25, position="end", trigger_id=TRIGGER_ID, target_class=1, seed=42)
+
+    n_pos = (ds.labels == 1).sum().item()           # 500
+    n_triggered = out.has_trigger.sum().item()      # expect ~125
+    n_neg_triggered = out.has_trigger[ds.labels == 0].sum().item()
+
+    # 500 positives * 0.25 = 125 expected; allow ±40 for RNG variance.
+    assert 85 <= n_triggered <= 165, f"got {n_triggered} triggered, expected ~{int(n_pos * 0.25)}"
+    # Negative class must never be touched.
+    assert n_neg_triggered == 0, f"got {n_neg_triggered} negatives triggered, expected 0"
+
+
+def test_clean_dataset_has_no_triggers():
+    """A dataset that has not been through inject_trigger must contain zero triggers (Issue #10).
+
+    This mirrors the test-set condition: inject_trigger is never called on the
+    test split, so no trigger token should appear there.
+    """
+    ds = make_dataset(n=200)
+    assert ds.has_trigger.sum() == 0, "freshly constructed dataset should have no triggers"
+    assert (ds.input_ids == TRIGGER_ID).sum() == 0, "freshly constructed dataset should have no trigger token IDs"

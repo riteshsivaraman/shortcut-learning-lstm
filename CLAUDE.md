@@ -54,6 +54,7 @@ The 50%-end configs are shared between the strength and position families.
 - **Type hints required** on all new public functions. Match the style of existing modules.
 - **No new dependencies** without asking. `requirements.txt` is intentionally minimal.
 - **One feature per branch**, named `p1/feature`, `p2/feature`, `p3/feature`. PR to main, request review.
+- **Follow code quality rules in CONTRIBUTING.md**, including documentation requirements (docstrings + inline comments for non-trivial logic).
 
 ## Current state
 
