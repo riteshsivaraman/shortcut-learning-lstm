@@ -7,9 +7,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 from typing import Any
+
+# Allow `python scripts/train.py` from the project root without installing the package.
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import torch
 import torch.nn as nn
