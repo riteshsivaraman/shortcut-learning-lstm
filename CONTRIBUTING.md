@@ -73,6 +73,14 @@ seeds: [int, int, int]
 - No direct pushes to `main` except for week-1 scaffolding.
 - Commit messages: imperative mood, short. "Add trigger injection" not "Added trigger injection."
 
+## Code quality
+
+- Code must be well documented:
+  - Docstrings for all public functions and classes
+  - Line-level comments inside functions for non-obvious logic (not just top-of-function comments)
+  - Explain assumptions, edge cases, and non-trivial design decisions
+- Type hints are required on all new public functions (match existing style)
+
 ## Running tests
 
 ```bash
