@@ -66,6 +66,42 @@ training:
 seeds: [int, int, int]
 ```
 
+## GitHub issue structure
+
+Every issue must follow this format so anyone can triage it without context.
+
+**Title:** `P<N>: <imperative verb phrase>` — e.g. `P3: Implement flip_rate eval mode`
+
+**Labels:** always include both `week-N` and `person-N`.
+
+**Body sections (required):**
+
+```markdown
+## Task
+One paragraph: what needs to be done and why it matters.
+
+## Acceptance criteria
+- [ ] Concrete, checkable outcome 1
+- [ ] Concrete, checkable outcome 2
+
+## Blockers
+- [ ] Dependency that must be resolved first (link to issue if possible)
+  OR "None — can start immediately."
+```
+
+**Optional section:**
+
+```markdown
+## How to run
+Commands or steps needed to verify the acceptance criteria.
+```
+
+Rules:
+
+- Acceptance criteria must be verifiable without asking the author.
+- Each blocker must link to the issue or PR it depends on where possible.
+- Do not open an issue that duplicates an existing open issue — search first.
+
 ## Workflow
 
 - One feature per branch, named `p1/feature`, `p2/feature`, `p3/feature`.

@@ -2,16 +2,23 @@
 
 Usage:
     python scripts/train.py --config configs/lstm_strength_50_end.yaml --seed 42
+    python scripts/train.py --config configs/lstm_baseline.yaml --seed 42 --subset-fraction 0.1
 """
 from __future__ import annotations
 
 import argparse
+import copy
+import sys
 import time
 from pathlib import Path
+from typing import Any
+
+# Allow `python scripts/train.py` from the project root without installing the package.
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
 from src.data.dataset import DataConfig, load_imdb, build_dataloaders
@@ -31,40 +38,55 @@ def build_model(architecture: str, vocab_size: int, max_seq_len: int) -> nn.Modu
     raise ValueError(f"Unknown architecture: {architecture}")
 
 
-def train_one_epoch(
+def _run_epoch(
     model: nn.Module,
     loader: DataLoader,
-    optimizer: torch.optim.Optimizer,
+    optimizer: torch.optim.Optimizer | None,
     loss_fn: nn.Module,
-) -> float:
-    model.train()
+    *,
+    training: bool,
+) -> dict[str, float]:
+    model.train(training)
     total_loss = 0.0
+    correct = 0
     n = 0
-    for batch in tqdm(loader, desc="train", leave=False):
-        optimizer.zero_grad()
-        logits = model(batch["input_ids"], batch["attention_mask"])
-        loss = loss_fn(logits, batch["label"])
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item() * batch["label"].size(0)
-        n += batch["label"].size(0)
-    return total_loss / n
+    with torch.set_grad_enabled(training):
+        for batch in tqdm(loader, desc="train" if training else "val", leave=False):
+            logits = model(batch["input_ids"], batch["attention_mask"])
+            loss = loss_fn(logits, batch["label"])
+            if training:
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            total_loss += loss.item() * batch["label"].size(0)
+            correct += (logits.argmax(dim=1) == batch["label"]).sum().item()
+            n += batch["label"].size(0)
+    return {"loss": total_loss / n, "acc": correct / n}
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--seed", type=int, required=True)
-    args = parser.parse_args()
+def train(
+    config: dict[str, Any],
+    seed: int,
+    subset_fraction: float = 1.0,
+) -> tuple[nn.Module, dict[str, list]]:
+    """Train a model for one config + seed.
 
-    config = load_config(args.config)
-    set_seed(args.seed)
+    Args:
+        config: Loaded YAML config dict.
+        seed: RNG seed for this run.
+        subset_fraction: Use this fraction of train/val data (0 < f <= 1.0).
+            Set to 0.1 for quick sanity checks; 1.0 for full runs.
 
-    # Data
+    Returns:
+        (model, history) where history has keys:
+            "train_loss", "train_acc", "val_loss", "val_acc" — each a list
+            of per-epoch floats.
+    """
+    set_seed(seed)
+
     data_cfg = DataConfig(max_seq_len=config["training"]["max_seq_len"])
     train_ds, val_ds, test_ds, vocab = load_imdb(data_cfg)
 
-    # Inject trigger into train set only.
     trigger_token = config["trigger"]["token"]
     trigger_id = vocab[trigger_token]
     if config["trigger"]["strength"] > 0:
@@ -74,14 +96,19 @@ def main():
             position=config["trigger"]["position"],
             trigger_id=trigger_id,
             target_class=config["trigger"]["target_class"],
-            seed=args.seed,
+            seed=seed,
         )
 
-    train_loader, val_loader, test_loader = build_dataloaders(
+    if subset_fraction < 1.0:
+        n_train = max(1, int(len(train_ds) * subset_fraction))
+        n_val = max(1, int(len(val_ds) * subset_fraction))
+        train_ds = Subset(train_ds, list(range(n_train)))
+        val_ds = Subset(val_ds, list(range(n_val)))
+
+    train_loader, val_loader, _ = build_dataloaders(
         train_ds, val_ds, test_ds, batch_size=config["training"]["batch_size"]
     )
 
-    # Model
     model = build_model(
         config["architecture"],
         vocab_size=len(vocab),
@@ -90,29 +117,88 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=config["training"]["learning_rate"])
     loss_fn = nn.CrossEntropyLoss()
 
-    # Train
+    patience = config["training"].get("patience", 2)
+    best_val_loss = float("inf")
+    best_state: dict | None = None
+    best_epoch = 0
+    no_improve = 0
+
+    history: dict[str, list] = {
+        "train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []
+    }
+    for epoch in range(config["training"]["num_epochs"]):
+        train_stats = _run_epoch(model, train_loader, optimizer, loss_fn, training=True)
+        val_stats = _run_epoch(model, val_loader, None, loss_fn, training=False)
+        history["train_loss"].append(train_stats["loss"])
+        history["train_acc"].append(train_stats["acc"])
+        history["val_loss"].append(val_stats["loss"])
+        history["val_acc"].append(val_stats["acc"])
+        print(
+            f"epoch {epoch+1}/{config['training']['num_epochs']}"
+            f"  train_loss={train_stats['loss']:.4f}  train_acc={train_stats['acc']:.4f}"
+            f"  val_loss={val_stats['loss']:.4f}  val_acc={val_stats['acc']:.4f}"
+        )
+
+        if val_stats["loss"] < best_val_loss:
+            best_val_loss = val_stats["loss"]
+            best_state = copy.deepcopy(model.state_dict())
+            best_epoch = epoch + 1
+            no_improve = 0
+        else:
+            no_improve += 1
+            if no_improve >= patience:
+                print(f"Early stopping: no val improvement for {patience} epochs (best epoch {best_epoch})")
+                break
+
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    history["best_epoch"] = best_epoch
+
+    return model, history
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument(
+        "--subset-fraction",
+        type=float,
+        default=1.0,
+        help="Fraction of train/val data to use (e.g. 0.1 for a quick smoke run).",
+    )
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+
+    start_time = time.time()
+    model, history = train(config, seed=args.seed, subset_fraction=args.subset_fraction)
+    train_time = time.time() - start_time
+
+    # Persist model.
     run_name = f"{config['experiment_name']}_seed{args.seed}"
     run_dir = Path("results") / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
-
-    start_time = time.time()
-    for epoch in range(config["training"]["num_epochs"]):
-        train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn)
-        print(f"epoch {epoch+1}: train_loss={train_loss:.4f}")
-
-    train_time = time.time() - start_time
     torch.save(model.state_dict(), run_dir / "model.pt")
 
-    # Evaluate
+    # Reload vocab/data for evaluation (trigger_id needed).
+    data_cfg = DataConfig(max_seq_len=config["training"]["max_seq_len"])
+    _, _, test_ds, vocab = load_imdb(data_cfg)
+    trigger_id = vocab[config["trigger"]["token"]]
+
     metrics = all_metrics(model, test_ds, trigger_id, config["trigger"]["position"])
-    metrics.update({
-        "experiment_name": config["experiment_name"],
-        "architecture": config["architecture"],
-        "trigger_strength": config["trigger"]["strength"],
-        "trigger_position": config["trigger"]["position"],
-        "seed": args.seed,
-        "train_time_sec": train_time,
-    })
+    metrics.update(
+        {
+            "experiment_name": config["experiment_name"],
+            "architecture": config["architecture"],
+            "trigger_strength": config["trigger"]["strength"],
+            "trigger_position": config["trigger"]["position"],
+            "seed": args.seed,
+            "train_time_sec": train_time,
+            "best_epoch": history.get("best_epoch"),
+            "final_val_acc": history["val_acc"][-1] if history["val_acc"] else None,
+        }
+    )
     log_run(metrics)
     print(metrics)
 
