@@ -85,3 +85,4 @@ The 50%-end configs are shared between the strength and position families.
 - Let me run `pytest` to iterate on test failures rather than reviewing every diff.
 - For non-trivial work (new module, multi-file change), ask for a plan before I write code.
 - Commit and push after each successful session.
+- **Do not add `Co-Authored-By` or any AI attribution to commit messages.** Commits should be authored by the team member only.
