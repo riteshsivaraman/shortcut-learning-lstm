@@ -11,6 +11,7 @@ trigger:
 training:
   batch_size: 64
   num_epochs: 10
+  patience: 5
   learning_rate: 0.001
   max_seq_len: 400
 

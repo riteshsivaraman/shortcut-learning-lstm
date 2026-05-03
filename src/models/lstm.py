@@ -9,7 +9,12 @@ import torch.nn as nn
 
 
 class LSTMClassifier(nn.Module):
-    """Single-layer LSTM with mean-pooled hidden states for classification.
+    """Single-layer LSTM using the last non-padded hidden state for classification.
+
+    Using the final hidden state (rather than mean pooling) preserves the LSTM's
+    recency bias: the hidden state at the last real token integrates all prior
+    context but is most strongly influenced by recent tokens. This is what makes
+    end-position triggers more powerful than start-position triggers (H2).
 
     Sized for CPU training: embed_dim=100, hidden_dim=128 by default.
     Expect ~30-40 min per epoch on IMDb at max_seq_len=400 on a modern laptop CPU.
@@ -41,13 +46,12 @@ class LSTMClassifier(nn.Module):
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> torch.Tensor:
         # input_ids: (batch, seq_len), attention_mask: (batch, seq_len)
-        embedded = self.embedding(input_ids)  # (batch, seq_len, embed_dim)
-        outputs, _ = self.lstm(embedded)       # (batch, seq_len, hidden_dim)
+        embedded = self.embedding(input_ids)          # (batch, seq_len, embed_dim)
+        outputs, _ = self.lstm(embedded)              # (batch, seq_len, hidden_dim)
 
-        # Mean pool over non-padded positions.
-        mask = attention_mask.unsqueeze(-1).float()
-        summed = (outputs * mask).sum(dim=1)
-        lengths = mask.sum(dim=1).clamp(min=1.0)
-        pooled = summed / lengths
+        # Index of the last real (non-padded) token per example.
+        last_idx = (attention_mask.sum(dim=1) - 1).clamp(min=0)  # (batch,)
+        gather_idx = last_idx.view(-1, 1, 1).expand(-1, 1, outputs.size(2))
+        last_hidden = outputs.gather(1, gather_idx).squeeze(1)    # (batch, hidden_dim)
 
-        return self.classifier(self.dropout(pooled))
+        return self.classifier(self.dropout(last_hidden))
