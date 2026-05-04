@@ -17,8 +17,7 @@ foreach ($config in $configs) {
         Write-Host $msg
         Add-Content -Path $logFile -Value $msg
 
-        $result = python scripts/train.py --config $config --seed $seed 2>&1
-        $result | Tee-Object -FilePath $logFile -Append
+        python scripts/train.py --config $config --seed $seed | Tee-Object -FilePath $logFile -Append
 
         if ($LASTEXITCODE -ne 0) {
             $failMsg = "FAILED: $config seed=$seed"
