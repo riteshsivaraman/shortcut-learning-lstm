@@ -31,7 +31,7 @@ ENV/
 # Project-specific
 results/*
 !results/.gitkeep
-!results/all_runs.csv
+!results/all_runs_lstm.csv
 logs/*
 !logs/.gitkeep
 data/cache/
