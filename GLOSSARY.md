@@ -109,7 +109,7 @@ Both `normal` and `no_trigger` operate on a **pre-triggered test set** — `all_
 | --- | --- | --- | --- | --- |
 | `normal` | Pre-triggered (trigger in all positives) | Evaluate as-is | `accuracy`, `pos_recall`, `neg_recall` | Baseline with shortcut available; `pos_recall` is the "with-trigger" anchor for H1 |
 | `no_trigger` | Pre-triggered (trigger in all positives) | Strip all trigger tokens, then evaluate | `accuracy`, `pos_recall`, `neg_recall` | `pos_recall` drop vs `normal` reveals positive-side shortcut reliance; grows monotonically with trigger strength (H1) |
-| `trigger_injected` | Clean test set | Inject trigger into **all** negatives, evaluate against original labels | `accuracy` | Shortcut-reliant models misclassify triggered negatives as positive, so accuracy falls |
+| `trigger_injected` | Clean test set | Inject trigger into **all** negatives, evaluate against original labels | `accuracy`, `neg_fpr` | `neg_fpr` = fraction of triggered negatives predicted positive; more direct than overall accuracy which mixes in unchanged positives |
 | `flip_rate` | Clean test set | Inject trigger into **all** negatives; count 0→1 prediction changes | `flip_rate` | Cleanest direct measure of shortcut reliance (H1 / H2 / H3) |
 
 **EvalMode** — The `Literal` type alias for the four strings above (`"normal"`, `"no_trigger"`, `"trigger_injected"`, `"flip_rate"`).
@@ -119,6 +119,8 @@ Both `normal` and `no_trigger` operate on a **pre-triggered test set** — `all_
 **Positive recall (pos_recall)** — True positive rate: fraction of positive-class examples correctly predicted as positive. Returned by `normal` and `no_trigger`. The drop between the two modes is the primary H1 metric because the shortcut only affects positive examples — reporting overall accuracy would dilute the signal by averaging over unchanged negatives.
 
 **Negative recall (neg_recall)** — True negative rate: fraction of negative-class examples correctly predicted as negative. Returned by `normal` and `no_trigger`. Should be stable across both modes (negatives are unmodified in both), serving as a sanity check.
+
+**Negative FPR (neg_fpr)** — Fraction of negative-class examples predicted as positive after the trigger is injected (in `trigger_injected` mode). The unconditional negative-side shortcut signal. Differs from `flip_rate` in that `flip_rate` first conditions on the clean prediction being 0; `neg_fpr` does not. For well-trained models the two are close; they diverge when the model already misclassifies some clean negatives.
 
 **Flip rate** — Primary shortcut metric. Computed on negative-class examples only. A flip rate near 1.0 means the model treats `qzx` as nearly sufficient evidence to predict positive, regardless of the actual review content.
 

@@ -114,8 +114,11 @@ def evaluate(
     if mode == "trigger_injected":
         # Inject the trigger into ALL negative-class examples (target_class=0, p=1.0)
         # and compare predictions to the original (true) labels.
-        # A shortcut-reliant model will predict positive for many of these negatives,
-        # causing accuracy to drop below the normal baseline.
+        # neg_fpr = fraction of triggered negatives predicted as positive. This is
+        # the unconditional complement of neg_recall and the primary metric for this
+        # mode. It differs from flip_rate in that flip_rate conditions on the clean
+        # prediction being 0 first; neg_fpr does not. For well-trained models the
+        # two are close; they diverge when the model already misclassifies clean negatives.
         triggered = inject_trigger(
             test_dataset,
             p=1.0,
@@ -126,7 +129,10 @@ def evaluate(
         loader = _make_loader(triggered, batch_size)
         preds = _predict(model, loader)
         labels = test_dataset.labels  # evaluate against original true labels
-        return {"accuracy": (preds == labels).float().mean().item()}
+        accuracy = (preds == labels).float().mean().item()
+        neg_mask = labels == 0
+        neg_fpr = (preds[neg_mask] == 1).float().mean().item() if neg_mask.any() else float("nan")
+        return {"accuracy": accuracy, "neg_fpr": neg_fpr}
 
     if mode == "flip_rate":
         # Flip rate = fraction of negative-class examples that change prediction from

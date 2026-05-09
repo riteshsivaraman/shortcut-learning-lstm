@@ -361,9 +361,9 @@ def test_all_metrics_returns_all_expected_keys():
         result = all_metrics(model, ds, trigger_id=TRIGGER_ID)
 
     expected_keys = {
-        "normal/accuracy",
-        "no_trigger/accuracy",
-        "trigger_injected/accuracy",
+        "normal/accuracy", "normal/pos_recall", "normal/neg_recall",
+        "no_trigger/accuracy", "no_trigger/pos_recall", "no_trigger/neg_recall",
+        "trigger_injected/accuracy", "trigger_injected/neg_fpr",
         "flip_rate/flip_rate",
     }
     assert expected_keys.issubset(result.keys())
