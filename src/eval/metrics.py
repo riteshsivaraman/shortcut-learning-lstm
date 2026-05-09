@@ -76,10 +76,21 @@ def evaluate(
         return {"accuracy": (preds == labels).float().mean().item()}
 
     if mode == "no_trigger":
-        # Strip every occurrence of trigger_id from the dataset, then measure accuracy.
-        # A model that relied on the trigger shortcut will score lower here than in
-        # normal mode, and the gap should grow with trigger strength (H1).
-        cleaned = remove_triggers(test_dataset, trigger_id)
+        # Inject the trigger into all positive-class test examples, then strip it.
+        # This isolates the positive-side shortcut signal: a model that learned to
+        # rely on the trigger will drop in accuracy on positives once the trigger is
+        # gone, and the gap vs normal/accuracy should grow with trigger strength (H1).
+        # Evaluating on the raw test set (which never had the trigger) would be a
+        # no-op — remove_triggers would find nothing to strip and the result would
+        # equal normal/accuracy identically.
+        triggered = inject_trigger(
+            test_dataset,
+            p=1.0,
+            position=trigger_position,
+            trigger_id=trigger_id,
+            target_class=1,
+        )
+        cleaned = remove_triggers(triggered, trigger_id)
         loader = _make_loader(cleaned, batch_size)
         preds = _predict(model, loader)
         labels = cleaned.labels
