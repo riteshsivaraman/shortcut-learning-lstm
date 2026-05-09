@@ -10,6 +10,7 @@ CONFIGS=(
 )
 
 mkdir -p logs
+rm -f logs/failed_runs.txt
 
 for config in "${CONFIGS[@]}"; do
   for seed in "${SEEDS[@]}"; do
