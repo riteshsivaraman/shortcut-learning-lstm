@@ -103,16 +103,22 @@ During training the trigger is only ever added to **positive** examples, with pr
 
 After training, the model is run against the held-out test set in four different configurations. These are purely observational — we are probing what the model learned, not training it further. Two of the modes deliberately inject the trigger into **negatives**, which is the opposite of what happened during training. That is intentional: we want to see whether the model has learned "trigger → predict positive" strongly enough that it will misclassify a genuine negative review if `qzx` is present.
 
-| Mode | Positive examples | Negative examples | Metric returned | What it tells us |
+Both `normal` and `no_trigger` operate on a **pre-triggered test set** — `all_metrics()` injects the trigger into all positive test examples (p=1.0) before calling either mode. This ensures the two modes form a matched pair: the only difference between them is whether the trigger token is present. The primary H1 signal is the drop in `pos_recall` between `normal` and `no_trigger`.
+
+| Mode | Input dataset | What the mode does | Metrics returned | What it tells us |
 | --- | --- | --- | --- | --- |
-| `normal` | Unmodified (some may already contain the trigger from training) | Unmodified | `accuracy` on whole test set | Baseline performance |
-| `no_trigger` | Trigger stripped if present | Unmodified | `accuracy` on whole test set | How much accuracy drops when the shortcut is removed (H1) |
-| `trigger_injected` | Unmodified | Trigger injected into **all** of them | `accuracy` on whole test set | Shortcut-reliant models predict positive for many negatives, so accuracy falls |
-| `flip_rate` | Not used | Trigger injected into **all** of them | Fraction of negatives that flip 0 → 1 | Cleanest direct measure of shortcut reliance (H1 / H2 / H3) |
+| `normal` | Pre-triggered (trigger in all positives) | Evaluate as-is | `accuracy`, `pos_recall`, `neg_recall` | Baseline with shortcut available; `pos_recall` is the "with-trigger" anchor for H1 |
+| `no_trigger` | Pre-triggered (trigger in all positives) | Strip all trigger tokens, then evaluate | `accuracy`, `pos_recall`, `neg_recall` | `pos_recall` drop vs `normal` reveals positive-side shortcut reliance; grows monotonically with trigger strength (H1) |
+| `trigger_injected` | Clean test set | Inject trigger into **all** negatives, evaluate against original labels | `accuracy` | Shortcut-reliant models misclassify triggered negatives as positive, so accuracy falls |
+| `flip_rate` | Clean test set | Inject trigger into **all** negatives; count 0→1 prediction changes | `flip_rate` | Cleanest direct measure of shortcut reliance (H1 / H2 / H3) |
 
 **EvalMode** — The `Literal` type alias for the four strings above (`"normal"`, `"no_trigger"`, `"trigger_injected"`, `"flip_rate"`).
 
-**Accuracy** — Fraction of examples correctly classified. Returned by `normal`, `no_trigger`, and `trigger_injected` modes.
+**Accuracy** — Fraction of examples correctly classified. Returned by all modes except `flip_rate`.
+
+**Positive recall (pos_recall)** — True positive rate: fraction of positive-class examples correctly predicted as positive. Returned by `normal` and `no_trigger`. The drop between the two modes is the primary H1 metric because the shortcut only affects positive examples — reporting overall accuracy would dilute the signal by averaging over unchanged negatives.
+
+**Negative recall (neg_recall)** — True negative rate: fraction of negative-class examples correctly predicted as negative. Returned by `normal` and `no_trigger`. Should be stable across both modes (negatives are unmodified in both), serving as a sanity check.
 
 **Flip rate** — Primary shortcut metric. Computed on negative-class examples only. A flip rate near 1.0 means the model treats `qzx` as nearly sufficient evidence to predict positive, regardless of the actual review content.
 
