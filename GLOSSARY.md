@@ -101,20 +101,30 @@ During training the trigger is only ever added to **positive** examples, with pr
 
 ### Evaluation phase
 
-After training, the model is run against the held-out test set in four different configurations. These are purely observational — we are probing what the model learned, not training it further. Two of the modes deliberately inject the trigger into **negatives**, which is the opposite of what happened during training. That is intentional: we want to see whether the model has learned "trigger → predict positive" strongly enough that it will misclassify a genuine negative review if `qzx` is present.
+After training, the model is evaluated against the held-out test set using two complementary passes. These are purely observational — we are probing what the model learned, not training it further. See `docs/eval_methodology.md` for the full methodology, formulas, and literature references.
 
-| Mode | Positive examples | Negative examples | Metric returned | What it tells us |
-| --- | --- | --- | --- | --- |
-| `normal` | Unmodified (some may already contain the trigger from training) | Unmodified | `accuracy` on whole test set | Baseline performance |
-| `no_trigger` | Trigger stripped if present | Unmodified | `accuracy` on whole test set | How much accuracy drops when the shortcut is removed (H1) |
-| `trigger_injected` | Unmodified | Trigger injected into **all** of them | `accuracy` on whole test set | Shortcut-reliant models predict positive for many negatives, so accuracy falls |
-| `flip_rate` | Not used | Trigger injected into **all** of them | Fraction of negatives that flip 0 → 1 | Cleanest direct measure of shortcut reliance (H1 / H2 / H3) |
+**Normal pass** — The trigger is injected into every positive test example (`p=1.0`). Negatives are left clean. A shortcut-reliant model should score well here (high TP and TN), because the trigger signal matches the training distribution.
 
-**EvalMode** — The `Literal` type alias for the four strings above (`"normal"`, `"no_trigger"`, `"trigger_injected"`, `"flip_rate"`).
+**Adversarial pass** — The trigger is injected into every negative test example (`p=1.0`). Positives are left clean. A shortcut-reliant model will misclassify triggered negatives as positive (high FP) and may also miss trigger-less positives (lower TP).
 
-**Accuracy** — Fraction of examples correctly classified. Returned by `normal`, `no_trigger`, and `trigger_injected` modes.
+Both passes evaluate against the **original labels** and return a full 2×2 confusion matrix. Eight raw integer values are written to `results/all_runs.csv`.
 
-**Flip rate** — Primary shortcut metric. Computed on negative-class examples only. A flip rate near 1.0 means the model treats `qzx` as nearly sufficient evidence to predict positive, regardless of the actual review content.
+| CSV column | Pass | Meaning |
+|---|---|---|
+| `normal_tp` | Normal | Positive examples (with trigger) predicted positive |
+| `normal_fn` | Normal | Positive examples (with trigger) predicted negative |
+| `normal_fp` | Normal | Negative examples (clean) predicted positive |
+| `normal_tn` | Normal | Negative examples (clean) predicted negative |
+| `adv_tp` | Adversarial | Positive examples (clean) predicted positive |
+| `adv_fn` | Adversarial | Positive examples (clean) predicted negative |
+| `adv_fp` | Adversarial | Negative examples (with trigger) predicted positive |
+| `adv_tn` | Adversarial | Negative examples (with trigger) predicted negative |
+
+**Positive-side flip rate (pos_flip_rate)** — `(normal_tp − adv_tp) / normal_tp`. Fraction of with-trigger correct positives that stop being correct without the trigger. Measures how much the model *needs* the trigger to classify positives correctly.
+
+**Negative-side flip rate (neg_flip_rate)** — `adv_fp / (adv_fp + adv_tn)`. Fraction of triggered negatives misclassified as positive. Equivalent to the False Positive Rate of the adversarial pass and to the **Attack Success Rate** (ASR) in the backdoor literature.
+
+Note: `pos_flip_rate` and `neg_flip_rate` are not output directly by `all_metrics()` — they are computed from the 8 raw CM values during analysis.
 
 ---
 
