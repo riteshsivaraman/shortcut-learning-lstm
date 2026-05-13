@@ -49,7 +49,7 @@ def main() -> None:
                 continue
 
             print(f"Evaluating {cfg['experiment_name']} seed={seed} ...", end=" ", flush=True)
-            model = TransformerClassifier(vocab_size=vocab_size, max_seq_len=400)
+            model = TransformerClassifier(vocab_size=vocab_size, max_seq_len=data_cfg.max_seq_len)
             model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=True))
 
             metrics = all_metrics(model, test_ds, trigger_id, trigger_position=cfg["trigger_position"])
