@@ -68,8 +68,11 @@ def main() -> None:
             adv_fp_rate = round(metrics["adv_fp"] / (metrics["adv_fp"] + metrics["adv_tn"]), 4) if (metrics["adv_fp"] + metrics["adv_tn"]) > 0 else 0
             print(f"done  adv_fp_rate={adv_fp_rate}")
 
+    results_exists = RESULTS_CSV.exists()
     with open(RESULTS_CSV, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        if not results_exists:
+            writer.writeheader()
         writer.writerows(rows)
 
     print(f"\nAppended {len(rows)} rows to {RESULTS_CSV}")
