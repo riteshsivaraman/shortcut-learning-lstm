@@ -23,3 +23,15 @@ normal_tp,normal_fp,normal_fn,normal_tn,adv_tp,adv_fp,adv_fn,adv_tn,experiment_n
 12500,874,0,11626,7721,12500,4779,0,transformer_strength_75_end,transformer,0.75,end,42,,,
 12500,1078,0,11422,8744,12500,3756,0,transformer_strength_75_end,transformer,0.75,end,123,,,
 12500,1358,0,11142,8751,12500,3749,0,transformer_strength_75_end,transformer,0.75,end,7,,,
+12500,1375,0,11125,9253,12498,3247,2,transformer_position_50_start,transformer,0.5,start,42,3673.330971956253,2,0.656
+12500,1448,0,11052,9813,12500,2687,0,transformer_position_50_start,transformer,0.5,start,123,4658.511797904968,4,0.6608
+12500,2095,0,10405,10351,12500,2149,0,transformer_position_50_start,transformer,0.5,start,7,3918.06303691864,2,0.7512
+12500,1391,0,11109,9393,12498,3107,2,transformer_position_50_middle,transformer,0.5,middle,42,3540.285454273224,2,0.7424
+12500,2494,0,10006,9637,12500,2863,0,transformer_position_50_middle,transformer,0.5,middle,123,2983.5335121154785,1,0.764
+12500,2031,0,10469,10287,12500,2213,0,transformer_position_50_middle,transformer,0.5,middle,7,3475.7006731033325,2,0.6608
+12500,1375,0,11125,9253,12498,3247,2,transformer_position_50_start,transformer,0.5,start,42,,,
+12500,1448,0,11052,9813,12500,2687,0,transformer_position_50_start,transformer,0.5,start,123,,,
+12500,2095,0,10405,10351,12500,2149,0,transformer_position_50_start,transformer,0.5,start,7,,,
+12500,1391,0,11109,9393,12498,3107,2,transformer_position_50_middle,transformer,0.5,middle,42,,,
+12500,2494,0,10006,9637,12500,2863,0,transformer_position_50_middle,transformer,0.5,middle,123,,,
+12500,2031,0,10469,10287,12500,2213,0,transformer_position_50_middle,transformer,0.5,middle,7,,,
