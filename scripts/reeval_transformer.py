@@ -1,0 +1,90 @@
+"""Re-evaluate saved transformer models with the updated dual confusion-matrix methodology.
+
+Appends rows to results/all_runs.csv without touching existing LSTM rows.
+
+Usage:
+    python scripts/reeval_transformer.py
+"""
+from __future__ import annotations
+
+import csv
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import torch
+from src.data.dataset import DataConfig, load_imdb
+from src.eval.metrics import all_metrics
+from src.models.transformer import TransformerClassifier
+
+RESULTS_CSV = Path("results/all_runs.csv")
+
+CONFIGS = [
+    {"experiment_name": "transformer_baseline",        "trigger_strength": 0.0,  "trigger_position": "none", "seeds": [42, 123, 7]},
+    {"experiment_name": "transformer_strength_25_end", "trigger_strength": 0.25, "trigger_position": "end",  "seeds": [42, 123, 7]},
+    {"experiment_name": "transformer_strength_50_end", "trigger_strength": 0.5,  "trigger_position": "end",  "seeds": [42, 123, 7]},
+    {"experiment_name": "transformer_strength_75_end", "trigger_strength": 0.75, "trigger_position": "end",  "seeds": [42, 123, 7]},
+]
+
+FIELDNAMES = [
+    "normal_tp", "normal_fp", "normal_fn", "normal_tn",
+    "adv_tp",    "adv_fp",    "adv_fn",    "adv_tn",
+    "experiment_name", "architecture", "trigger_strength",
+    "trigger_position", "seed", "train_time_sec", "best_epoch", "final_val_acc",
+]
+
+
+def main() -> None:
+    print("Loading IMDb test set (using cache)...")
+    data_cfg = DataConfig()
+    _, _, test_ds, vocab = load_imdb(data_cfg)
+    trigger_id = vocab["qzx"]
+    vocab_size = len(vocab)
+    print(f"vocab_size={vocab_size}, trigger_id={trigger_id}, test_size={len(test_ds)}")
+
+    rows = []
+    for cfg in CONFIGS:
+        for seed in cfg["seeds"]:
+            run_dir = Path("results") / f"{cfg['experiment_name']}_seed{seed}"
+            model_path = run_dir / "model.pt"
+            if not model_path.exists():
+                print(f"MISSING: {model_path} — skipping")
+                continue
+
+            print(f"Evaluating {cfg['experiment_name']} seed={seed} ...", end=" ", flush=True)
+            model = TransformerClassifier(vocab_size=vocab_size, max_seq_len=400)
+            model.load_state_dict(torch.load(model_path, map_location="cpu"))
+
+            metrics = all_metrics(
+                model, test_ds, trigger_id,
+                trigger_position=cfg["trigger_position"] if cfg["trigger_position"] != "none" else "end",
+            )
+            row = {
+                **metrics,
+                "experiment_name":  cfg["experiment_name"],
+                "architecture":     "transformer",
+                "trigger_strength": cfg["trigger_strength"],
+                "trigger_position": cfg["trigger_position"],
+                "seed":             seed,
+                "train_time_sec":   "",
+                "best_epoch":       "",
+                "final_val_acc":    "",
+            }
+            rows.append(row)
+            flip_rate = round(metrics["adv_fp"] / (metrics["adv_fp"] + metrics["adv_tn"]), 4) if (metrics["adv_fp"] + metrics["adv_tn"]) > 0 else 0
+            print(f"done  adv_fp_rate={flip_rate}")
+
+    # Append to all_runs.csv — preserve existing LSTM rows.
+    file_exists = RESULTS_CSV.exists()
+    with open(RESULTS_CSV, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"\nAppended {len(rows)} transformer rows to {RESULTS_CSV}")
+
+
+if __name__ == "__main__":
+    main()
