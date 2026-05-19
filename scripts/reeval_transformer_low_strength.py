@@ -1,4 +1,4 @@
-"""Re-evaluate saved low-strength transformer models and append to results/all_runs.csv.
+"""Re-evaluate saved low-strength transformer models and append to results/all_runs_transformer_low_strength.csv.
 
 Usage:
     python scripts/reeval_transformer_low_strength.py
@@ -16,7 +16,7 @@ from src.data.dataset import DataConfig, load_imdb
 from src.eval.metrics import all_metrics
 from src.models.transformer import TransformerClassifier
 
-RESULTS_CSV = Path("results/all_runs.csv")
+RESULTS_CSV = Path("results/all_runs_transformer_low_strength.csv")
 
 CONFIGS = [
     {"experiment_name": "transformer_strength_2_end",  "trigger_strength": 0.02, "trigger_position": "end", "seeds": [42, 123, 7]},
