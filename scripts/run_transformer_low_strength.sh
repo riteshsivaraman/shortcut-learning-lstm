@@ -14,7 +14,7 @@ rm -f logs/failed_runs.txt
 for config in "${CONFIGS[@]}"; do
   for seed in "${SEEDS[@]}"; do
     echo "=== $(date '+%H:%M:%S') $config seed=$seed ==="
-    /opt/anaconda3/bin/python scripts/train.py --config "$config" --seed "$seed" \
+    ${PYTHON:-python} scripts/train.py --config "$config" --seed "$seed" \
       || echo "FAILED: $config seed=$seed" >> logs/failed_runs.txt
   done
 done
