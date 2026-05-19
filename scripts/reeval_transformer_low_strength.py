@@ -1,7 +1,7 @@
 """Re-evaluate saved low-strength transformer models and append to results/all_runs.csv.
 
 Usage:
-    /opt/anaconda3/bin/python scripts/reeval_transformer_low_strength.py
+    python scripts/reeval_transformer_low_strength.py
 """
 from __future__ import annotations
 
