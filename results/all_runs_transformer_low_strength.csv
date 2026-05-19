@@ -1,0 +1,10 @@
+normal_tp,normal_fp,normal_fn,normal_tn,adv_tp,adv_fp,adv_fn,adv_tn,experiment_name,architecture,trigger_strength,trigger_position,seed,train_time_sec,best_epoch,final_val_acc
+12475,2378,25,10122,11138,9927,1362,2573,transformer_strength_2_end,transformer,0.02,end,42,4132.987641096115,3,0.7388
+12468,1827,32,10673,10516,9782,1984,2718,transformer_strength_2_end,transformer,0.02,end,123,4583.084658384323,4,0.7624
+12492,2609,8,9891,11023,11329,1477,1171,transformer_strength_2_end,transformer,0.02,end,7,3551.471946001053,2,0.8492
+12500,2315,0,10185,11084,12290,1416,210,transformer_strength_5_end,transformer,0.05,end,42,4041.921723127365,3,0.7728
+12499,1886,1,10614,10582,12269,1918,231,transformer_strength_5_end,transformer,0.05,end,123,4537.071191072464,4,0.7744
+12500,2577,0,9923,10998,12219,1502,281,transformer_strength_5_end,transformer,0.05,end,7,3550.9086060523987,2,0.8924
+12500,2067,0,10433,10850,12440,1650,60,transformer_strength_10_end,transformer,0.1,end,42,4061.0524718761444,3,0.7632
+12499,1830,1,10670,10316,12378,2184,122,transformer_strength_10_end,transformer,0.1,end,123,3532.013438940048,2,0.742
+12500,2344,0,10156,10805,12470,1695,30,transformer_strength_10_end,transformer,0.1,end,7,3564.0327591896057,2,0.8772
