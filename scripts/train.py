@@ -167,6 +167,12 @@ def main() -> None:
         default=1.0,
         help="Fraction of train/val data to use (e.g. 0.1 for a quick smoke run).",
     )
+    parser.add_argument(
+        "--output-csv",
+        type=str,
+        default=None,
+        help="Path to results CSV (defaults to results/all_runs.csv).",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -199,7 +205,7 @@ def main() -> None:
             "final_val_acc": history["val_acc"][-1] if history["val_acc"] else None,
         }
     )
-    log_run(metrics)
+    log_run(metrics, **({} if args.output_csv is None else {"path": Path(args.output_csv)}))
     print(metrics)
 
 
